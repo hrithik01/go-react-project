@@ -167,6 +167,30 @@ func UpdateUser(wr http.ResponseWriter, req *http.Request) {
 
 func DeleteUser(wr http.ResponseWriter, req *http.Request) {
 	fmt.Println("DeleteUser")
+	wr.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(req)
+	id := params["id"]
+
+	var user User
+	err := db.QueryRow("SELECT * FROM users WHERE id = ?", id).Scan(&user.ID, &user.FirstName, &user.MiddleName, &user.LastName, &user.Email, &user.Gender, &user.CivilStatus, &user.Birthday, &user.Contact, &user.Address)
+	if err != nil {
+		log.Println(err)
+		http.Error(wr, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	_, err = db.Exec("DELETE FROM users WHERE id = ?", id)
+	if err != nil {
+		log.Println(err)
+		http.Error(wr, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	resp := map[string]interface{}{
+		"message":      "User deleted successfully",
+		"deleted_user": user,
+	}
+	jResp, _ := json.Marshal(resp)
+	wr.Write(jResp)
 }
 
 func InitDB() {
