@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 
@@ -44,6 +45,7 @@ type User struct {
 }
 
 func GetUsers(wr http.ResponseWriter, req *http.Request) {
+	fmt.Println("GetUsers")
 	wr.Header().Set("Content-Type", "application/json")
 
 	var users []User
@@ -69,16 +71,98 @@ func GetUsers(wr http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(wr).Encode(users)
 }
 
-func CreateUser(wr http.ResponseWriter, req *http.Request) {
+func CreateUser(w http.ResponseWriter, rq *http.Request) {
 	fmt.Println("CreateUser")
+	w.Header().Set("Content-Type", "application/json")
+
+	var user User
+	_ = json.NewDecoder(rq.Body).Decode(&user)
+
+	result, err := db.Exec("INSERT INTO users (first_name, middle_name, last_name, email, gender, civil_status, birthday, contact, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", user.FirstName, user.MiddleName, user.LastName, user.Email, user.Gender, user.CivilStatus, user.Birthday, user.Contact, user.Address)
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		fmt.Println(err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	user.ID = int(id)
+	json.NewEncoder(w).Encode(user)
 }
 
-func GetUser(wr http.ResponseWriter, req *http.Request) {
+func GetUser(w http.ResponseWriter, rq *http.Request) {
 	fmt.Println("GetUser")
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(rq)
+	id := params["id"]
+
+	row := db.QueryRow("SELECT * FROM users WHERE id = ?", id)
+
+	var user User
+	err := row.Scan(&user.ID, &user.FirstName, &user.MiddleName, &user.LastName, &user.Email, &user.Gender, &user.CivilStatus, &user.Birthday, &user.Contact, &user.Address)
+	if err != nil {
+		log.Println(err)
+		if err == sql.ErrNoRows {
+			http.Error(w, "User Not found", http.StatusNotFound)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(user)
 }
 
 func UpdateUser(wr http.ResponseWriter, req *http.Request) {
 	fmt.Println("UpdateUser")
+	wr.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(req)
+	id := params["id"]
+
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		fmt.Println("ReadAll", err)
+		http.Error(wr, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	var mp map[string]string
+	err = json.Unmarshal(body, &mp)
+	if err != nil {
+		fmt.Println("json unmarshalling", err)
+		http.Error(wr, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	if len(mp) == 0 {
+		http.Error(wr, `{"error": "Atleast one field is required to update"}`, http.StatusBadRequest)
+		return
+	}
+	query := "UPDATE users SET "
+	for k, v := range mp {
+		query += k + " = '" + v + "', "
+	}
+	query = query[:len(query)-2]
+	query += " WHERE id = " + id
+	_, err = db.Exec(query)
+	if err != nil {
+		fmt.Println("Exec Query", err)
+		http.Error(wr, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	// send the updated user entry response
+	row := db.QueryRow("SELECT * FROM users WHERE id = ?", id)
+	var user User
+	err = row.Scan(&user.ID, &user.FirstName, &user.MiddleName, &user.LastName, &user.Email, &user.Gender, &user.CivilStatus, &user.Birthday, &user.Contact, &user.Address)
+	if err != nil {
+		log.Println("row Scan-: ", err)
+		http.Error(wr, `{"error": "`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(wr).Encode(user)
 }
 
 func DeleteUser(wr http.ResponseWriter, req *http.Request) {

@@ -33,6 +33,8 @@ CREATE TABLE `users` (
   `address` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+ALTER TABLE users
+ADD UNIQUE (email);
 --
 -- Dumping data for table `users`
 --
