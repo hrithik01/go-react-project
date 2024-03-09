@@ -16,6 +16,12 @@ func main() {
 	Routers()
 }
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+}
+
 func Routers() {
 	InitDB()
 	defer db.Close()
@@ -26,7 +32,11 @@ func Routers() {
 	router.HandleFunc("/users/{id}", UpdateUser).Methods("PUT")
 	router.HandleFunc("/users/{id}", DeleteUser).Methods("DELETE")
 	fmt.Println("Server running at 3030")
-	if err := http.ListenAndServe(":3030", &CORSRouterDecorator{router}); err != nil {
+	// http.ListenAndServe(":3030", router)
+	if err := http.ListenAndServe(":3030", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		router.ServeHTTP(w, r)
+	})); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -212,19 +222,4 @@ var err error
 
 type CORSRouterDecorator struct {
 	R *mux.Router
-}
-
-func (c *CORSRouterDecorator) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if origin := req.Header.Get("Origin"); origin != "" {
-		rw.Header().Set("Access-Control-Allow-Origin", origin)
-		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		rw.Header().Set("Access-Control-Allow-Headers",
-			"Accept, Accept-Language, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	}
-
-	if req.Method == "OPTIONS" {
-		return
-	}
-
-	c.R.ServeHTTP(rw, req)
 }
