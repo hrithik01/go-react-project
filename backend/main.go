@@ -18,14 +18,20 @@ func main() {
 
 func enableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
-	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+	(*w).Header().Set("Access-Control-Allow-Methods", "*")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With, Access-Control-Request-Method")
 }
 
 func Routers() {
 	InitDB()
 	defer db.Close()
 	router := mux.NewRouter()
+
+	router.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		w.WriteHeader(http.StatusOK)
+	})
+
 	router.HandleFunc("/users", GetUsers).Methods("GET")
 	router.HandleFunc("/users", CreateUser).Methods("POST")
 	router.HandleFunc("/users/{id}", GetUser).Methods("GET")
