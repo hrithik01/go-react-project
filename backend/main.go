@@ -88,6 +88,14 @@ func CreateUser(w http.ResponseWriter, rq *http.Request) {
 	var user User
 	_ = json.NewDecoder(rq.Body).Decode(&user)
 
+	inputEmail := user.Email
+	var email string
+	err := db.QueryRow("SELECT email FROM users WHERE email = ?", inputEmail).Scan(&email)
+	// if email already exists already exist then throw error that email already exists
+	if err == nil {
+		http.Error(w, `{"error": "Email already exists! Try creating your account with another one"}`, http.StatusBadRequest)
+		return
+	}
 	result, err := db.Exec("INSERT INTO users (first_name, middle_name, last_name, email, gender, civil_status, birthday, contact, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", user.FirstName, user.MiddleName, user.LastName, user.Email, user.Gender, user.CivilStatus, user.Birthday, user.Contact, user.Address)
 	if err != nil {
 		fmt.Println(err)
@@ -208,6 +216,7 @@ func InitDB() {
 	// "username:password@protocol(host:port)/dbname"
 	db, err = sql.Open("mysql", "root@tcp(localhost:3306)/userdb")
 	if err != nil {
+		fmt.Println("Error establishing myaql connection: " + err.Error())
 		panic(err.Error())
 	}
 	err = db.Ping()

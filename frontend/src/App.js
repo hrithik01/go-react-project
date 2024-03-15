@@ -5,6 +5,7 @@ import { Switch } from 'react-router-dom/cjs/react-router-dom.min';
 import FooterComponent from './components/FooterComponent';
 import HeaderComponent from './components/HeaderComponent';
 import ListUserComponent from './components/ListUserComponent';
+import ViewUserComponent from './components/ViewUserComponent';
 
 function App() {
   return (
@@ -12,8 +13,9 @@ function App() {
       <Router>
         <HeaderComponent />
         <Switch>
+          <Route path="/view-user/:id" component={ViewUserComponent}></Route>
           <Route path="" component={ListUserComponent}></Route>
-          <Route path="/users" component={ListUserComponent}></Route>
+          <Route path="/users" exact component={ListUserComponent}></Route>
         </Switch>
         <FooterComponent />
       </Router>
