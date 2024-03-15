@@ -16,6 +16,12 @@ func main() {
 	Routers()
 }
 
+func enableCors(w *http.ResponseWriter) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With")
+}
+
 func Routers() {
 	InitDB()
 	defer db.Close()
@@ -26,7 +32,11 @@ func Routers() {
 	router.HandleFunc("/users/{id}", UpdateUser).Methods("PUT")
 	router.HandleFunc("/users/{id}", DeleteUser).Methods("DELETE")
 	fmt.Println("Server running at 3030")
-	if err := http.ListenAndServe(":3030", &CORSRouterDecorator{router}); err != nil {
+	// http.ListenAndServe(":3030", router)
+	if err := http.ListenAndServe(":3030", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		enableCors(&w)
+		router.ServeHTTP(w, r)
+	})); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -78,6 +88,14 @@ func CreateUser(w http.ResponseWriter, rq *http.Request) {
 	var user User
 	_ = json.NewDecoder(rq.Body).Decode(&user)
 
+	inputEmail := user.Email
+	var email string
+	err := db.QueryRow("SELECT email FROM users WHERE email = ?", inputEmail).Scan(&email)
+	// if email already exists already exist then throw error that email already exists
+	if err == nil {
+		http.Error(w, `{"error": "Email already exists! Try creating your account with another one"}`, http.StatusBadRequest)
+		return
+	}
 	result, err := db.Exec("INSERT INTO users (first_name, middle_name, last_name, email, gender, civil_status, birthday, contact, address) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", user.FirstName, user.MiddleName, user.LastName, user.Email, user.Gender, user.CivilStatus, user.Birthday, user.Contact, user.Address)
 	if err != nil {
 		fmt.Println(err)
@@ -198,6 +216,7 @@ func InitDB() {
 	// "username:password@protocol(host:port)/dbname"
 	db, err = sql.Open("mysql", "root@tcp(localhost:3306)/userdb")
 	if err != nil {
+		fmt.Println("Error establishing myaql connection: " + err.Error())
 		panic(err.Error())
 	}
 	err = db.Ping()
@@ -212,19 +231,4 @@ var err error
 
 type CORSRouterDecorator struct {
 	R *mux.Router
-}
-
-func (c *CORSRouterDecorator) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if origin := req.Header.Get("Origin"); origin != "" {
-		rw.Header().Set("Access-Control-Allow-Origin", origin)
-		rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
-		rw.Header().Set("Access-Control-Allow-Headers",
-			"Accept, Accept-Language, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	}
-
-	if req.Method == "OPTIONS" {
-		return
-	}
-
-	c.R.ServeHTTP(rw, req)
 }
