@@ -18,17 +18,17 @@ class ListUserComponent extends Component {
         if (window.confirm("Are you sure you want to delete this user?")) {
             UserService.deleteUser(id).then((res) => {
                 this.setState({ users: this.state.users.filter(user => user.id !== id) });
-            }).catch((error) => { console.log("Error in ListUserComponent", error) });
-        }
+            }).catch((error) => { console.log("Error in deleteUser function in ListUserComponent", error) });
+        } 
     }
     viewUser(id) {
         this.props.history.push(`/view-user/${id}`);
     }
     updateUser(id) {
-        this.props.history.push(`/update-user/${id}`);
+        this.props.history.push(`/add-user/${id}`);
     }
     addUser() {
-        this.props.history.push('/add-user');
+        this.props.history.push('/add-user/_add');
     }
     componentDidMount() {
         UserService.getUsers().then((res) => {

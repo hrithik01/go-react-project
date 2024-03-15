@@ -17,7 +17,7 @@ class UserService {
             const response = await axios.post(API_BASE_URL, user);
             return response.data;
         } catch (error) {
-            console.log("Error in UserService", error);
+            console.log("Error in UserService Creation function", error);
             throw error;
         }
     }
@@ -27,7 +27,7 @@ class UserService {
             console.log("response", response.data);
             return response.data;
         } catch (error) {
-            console.log("Error in UserService", error);
+            console.log("Error in UserService getUserById function", error);
             throw error;
         }
     }
@@ -36,7 +36,7 @@ class UserService {
             const response = await axios.put(`${API_BASE_URL}/${user.id}`, user);
             return response.data;
         } catch (error) {
-            console.log("Error in UserService", error);
+            console.log("Error in UserService update function", error);
             throw error;
         }
     }
@@ -45,7 +45,7 @@ class UserService {
             const response = await axios.delete(`${API_BASE_URL}/${id}`);
             return response.data;
         } catch (error) {
-            console.log("Error in UserService", error);
+            console.log("Error in UserService delete function", error);
             throw error;
         }
     }
